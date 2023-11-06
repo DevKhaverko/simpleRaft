@@ -34,10 +34,7 @@ type ApplyResult struct {
 type Entry struct {
 	Command []byte
 	Term    uint64
-
-	// Set by the primary so it can learn about the result of
-	// applying this command to the state machine
-	result chan ApplyResult
+	result  chan ApplyResult
 }
 
 type RPCMessage struct {
@@ -86,8 +83,6 @@ type AppendEntriesRequest struct {
 type AppendEntriesResponse struct {
 	RPCMessage
 
-	// true if follower contained entry matching prevLogIndex and
-	// prevLogTerm
 	Success bool
 }
 
@@ -129,9 +124,6 @@ type Server struct {
 	currentTerm uint64
 
 	log []Entry
-
-	// votedFor is stored in `cluster []ClusterMember` below,
-	// mapped by `clusterIndex` below
 
 	// ----------- READONLY STATE -----------
 
@@ -241,7 +233,7 @@ func NewServer(
 		statemachine: statemachine,
 		metadataDir:  metadataDir,
 		clusterIndex: clusterIndex,
-		heartbeatMs:  300,
+		heartbeatMs:  3000,
 		mu:           sync.Mutex{},
 	}
 }
@@ -765,10 +757,6 @@ func (s *Server) appendEntries() {
 	}
 }
 
-/*
-Принцип работы:
-
-*/
 func (s *Server) advanceCommitIndex() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
