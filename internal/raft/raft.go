@@ -84,6 +84,8 @@ type AppendEntriesResponse struct {
 	RPCMessage
 
 	Success bool
+
+	NextIndex uint64
 }
 
 type ClusterMember struct {
@@ -568,6 +570,11 @@ func (s *Server) HandleAppendEntriesRequest(req AppendEntriesRequest, rsp *Appen
 			s.log[req.PrevLogIndex].Term == req.PrevLogTerm)
 	if !validPreviousLog {
 		s.debug("Not a valid log.")
+		for i, member := range s.cluster {
+			if i == s.clusterIndex {
+				rsp.NextIndex = member.nextIndex
+			}
+		}
 		return nil
 	}
 
@@ -750,7 +757,7 @@ func (s *Server) appendEntries() {
 				s.cluster[i].matchIndex = s.cluster[i].nextIndex - 1
 				s.debugf("Messages (%d) accepted for %d. Prev Index: %d, Next Index: %d, Match Index: %d.", len(req.Entries), s.cluster[i].Id, prev, s.cluster[i].nextIndex, s.cluster[i].matchIndex)
 			} else {
-				s.cluster[i].nextIndex = max(s.cluster[i].nextIndex-1, 1)
+				s.cluster[i].nextIndex = max(rsp.NextIndex, 1)
 				s.debugf("Forced to go back to %d for: %d.", s.cluster[i].nextIndex, s.cluster[i].Id)
 			}
 		}(i)
